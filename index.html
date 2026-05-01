@@ -10,12 +10,12 @@
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;background-image:radial-gradient(ellipse at 20% 50%,rgba(0,212,255,.04) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(0,153,204,.05) 0%,transparent 50%);}
   #setupScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;}
-  .setup-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+  .setup-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;max-width:500px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4);}
   .setup-logo{font-family:var(--font-mono);font-size:22px;color:var(--accent);letter-spacing:3px;margin-bottom:8px;}
   .setup-logo span{color:var(--muted);}
   .setup-subtitle{font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.7;}
   .setup-label{display:block;font-size:11px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;font-family:var(--font-mono);}
-  .setup-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-body);font-size:14px;padding:12px 16px;margin-bottom:6px;outline:none;transition:border-color .2s,box-shadow .2s;}
+  .setup-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-body);font-size:14px;padding:12px 16px;margin-bottom:16px;outline:none;transition:border-color .2s,box-shadow .2s;}
   .setup-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1);}
   .setup-hint{font-size:11px;color:var(--muted);margin-bottom:20px;line-height:1.6;}
   .setup-hint a{color:var(--accent);text-decoration:none;}
@@ -24,6 +24,7 @@
   .setup-btn:disabled{opacity:.4;cursor:not-allowed;}
   .setup-error{background:rgba(255,82,82,.1);border:1px solid rgba(255,82,82,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:#ff8a80;margin-bottom:14px;display:none;}
   .setup-error.show{display:block;}
+  .verifying{text-align:center;padding:10px;font-family:var(--font-mono);font-size:12px;color:var(--muted);display:none;}
   #appScreen{display:none;}
   header{border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;gap:12px;background:rgba(17,24,39,.9);backdrop-filter:blur(10px);position:sticky;top:0;z-index:100;}
   .logo{font-family:var(--font-mono);font-size:16px;color:var(--accent);letter-spacing:2px;}
@@ -107,26 +108,38 @@
 </head>
 <body>
 
+<!-- SETUP -->
 <div id="setupScreen">
   <div class="setup-card">
     <div class="setup-logo">BIZ<span>/</span>OUTREACH</div>
-    <div class="setup-subtitle">初回設定：お名前を登録してください。<br>APIキーはサーバー側で管理されています。</div>
+    <div class="setup-subtitle">
+      初回設定：お名前とGoogle Places APIキーを登録してください。<br>
+      次回以降はこのブラウザで自動ログインされます。
+    </div>
     <label class="setup-label">お名前（識別用）</label>
     <input class="setup-input" type="text" id="setupName" placeholder="例：福西 佐允">
+    <label class="setup-label">Google Places API キー</label>
+    <input class="setup-input" type="password" id="setupApiKey" placeholder="AIzaSy...">
+    <div class="setup-hint">
+      APIキーは<a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a>で取得できます。Places APIとGeocoding APIを有効にしてください。
+    </div>
     <div class="setup-error" id="setupError"></div>
-    <button class="setup-btn" id="setupBtn" onclick="doSetup()">始める →</button>
+    <div class="verifying" id="verifying">🔍 確認中...</div>
+    <button class="setup-btn" id="setupBtn" onclick="doSetup()">登録して始める →</button>
   </div>
 </div>
 
+<!-- APP -->
 <div id="appScreen">
   <header>
     <div class="logo">BIZ<span>/</span>OUTREACH</div>
     <div class="header-user">
       <span id="headerName"></span>
-      <button class="btn-reset" onclick="resetSetup()">名前変更</button>
+      <button class="btn-reset" onclick="resetSetup()">APIキー変更</button>
     </div>
     <div class="status-dot"></div>
   </header>
+
   <div class="main">
     <div>
       <div class="panel" style="margin-bottom:14px;">
@@ -142,11 +155,13 @@
 ご興味がございましたら、お気軽にお問い合わせください。</textarea>
         </div>
       </div>
+
       <div class="panel">
         <div class="panel-header">企業検索条件</div>
         <div class="panel-body">
           <label>地域</label>
           <input type="text" id="location" placeholder="例：渋谷区" value="渋谷区">
+
           <label>業種カテゴリ（選択 または フリーワード）</label>
           <select id="category" onchange="onCategoryChange()">
             <option value="">── フリーワードで入力 ──</option>
@@ -168,26 +183,31 @@
           <div id="freewordArea" style="display:none;">
             <input type="text" id="freeword" placeholder="例：スマートホーム、介護施設、製造業など" style="margin-top:-8px;">
           </div>
+
           <label>取得件数</label>
           <select id="maxResults">
             <option value="5">5件</option>
             <option value="10" selected>10件</option>
             <option value="20">20件</option>
           </select>
+
           <button class="btn btn-primary" id="searchBtn" onclick="searchCompanies()">🔍 企業を検索する</button>
           <button class="btn btn-secondary" onclick="exportCSV()">📥 CSVダウンロード</button>
+
           <div class="log-area" id="logArea">
             <div class="log-entry log-info">// 準備完了。検索条件を入力してください。</div>
           </div>
         </div>
       </div>
     </div>
+
     <div>
       <div class="stats">
         <div class="stat"><span class="stat-val" id="statTotal">0</span><span class="stat-label">取得企業数</span></div>
         <div class="stat"><span class="stat-val" id="statSent" style="color:var(--green)">0</span><span class="stat-label">送信済み</span></div>
         <div class="stat"><span class="stat-val" id="statRate" style="color:var(--yellow)">0%</span><span class="stat-label">送信率</span></div>
       </div>
+
       <div class="results-panel">
         <div class="tab-bar">
           <div class="tab active" onclick="switchTab('list',this)">企業リスト</div>
@@ -221,6 +241,7 @@
   </div>
 </div>
 
+<!-- Modal -->
 <div class="modal-overlay" id="sendModal">
   <div class="modal">
     <h3>📨 問い合わせ送信確認</h3>
@@ -237,26 +258,51 @@
 </div>
 
 <script>
-const STORAGE_KEY_NAME='bizoutreach_name';
-let companies=[],sentIds=new Set(),sendHistory=[],currentIdx=-1;
+const STORAGE_KEY_NAME = 'bizoutreach_name';
+const STORAGE_KEY_API  = 'bizoutreach_apikey';
+let companies=[], sentIds=new Set(), sendHistory=[], currentIdx=-1, apiKey='';
 
 function init(){
   const name=localStorage.getItem(STORAGE_KEY_NAME);
-  if(name){showApp(name);}
+  const key=localStorage.getItem(STORAGE_KEY_API);
+  if(name&&key){apiKey=key;showApp(name);}
   else{document.getElementById('setupScreen').style.display='flex';}
 }
 
 function doSetup(){
   const name=document.getElementById('setupName').value.trim();
+  const key=document.getElementById('setupApiKey').value.trim();
   if(!name){showSetupError('お名前を入力してください');return;}
+  if(!key||!key.startsWith('AIza')){showSetupError('正しいAPIキーを入力してください（AIzaSy...で始まるもの）');return;}
   localStorage.setItem(STORAGE_KEY_NAME,name);
+  localStorage.setItem(STORAGE_KEY_API,key);
+  apiKey=key;
   showApp(name);
 }
 
-function showSetupError(msg){const e=document.getElementById('setupError');e.textContent=msg;e.classList.add('show');}
-function showApp(name){document.getElementById('setupScreen').style.display='none';document.getElementById('appScreen').style.display='block';document.getElementById('headerName').textContent=name+' さん';}
-function resetSetup(){localStorage.removeItem(STORAGE_KEY_NAME);location.reload();}
-function onCategoryChange(){const cat=document.getElementById('category').value;document.getElementById('freewordArea').style.display=cat===''?'block':'none';if(cat!=='')document.getElementById('freeword').value='';}
+function showSetupError(msg){
+  const e=document.getElementById('setupError');
+  e.textContent=msg;e.classList.add('show');
+}
+
+function showApp(name){
+  document.getElementById('setupScreen').style.display='none';
+  document.getElementById('appScreen').style.display='block';
+  document.getElementById('headerName').textContent=name+' さん';
+}
+
+function resetSetup(){
+  if(!confirm('APIキーの設定をリセットしますか？'))return;
+  localStorage.removeItem(STORAGE_KEY_NAME);
+  localStorage.removeItem(STORAGE_KEY_API);
+  location.reload();
+}
+
+function onCategoryChange(){
+  const cat=document.getElementById('category').value;
+  document.getElementById('freewordArea').style.display=cat===''?'block':'none';
+  if(cat!=='')document.getElementById('freeword').value='';
+}
 
 async function searchCompanies(){
   const locationStr=document.getElementById('location').value.trim();
@@ -264,6 +310,8 @@ async function searchCompanies(){
   const freeword=document.getElementById('freeword').value.trim();
   const keyword=category?document.getElementById('category').selectedOptions[0].text:freeword;
   const maxResults=parseInt(document.getElementById('maxResults').value);
+
+  if(!locationStr){log('地域を入力してください','err');return;}
   if(!keyword){log('業種カテゴリを選択するか、フリーワードを入力してください','err');return;}
 
   document.getElementById('searchBtn').disabled=true;
@@ -273,27 +321,44 @@ async function searchCompanies(){
   log(`「${locationStr}」の「${keyword}」を検索中...`);
 
   try{
-    const params=new URLSearchParams({location:locationStr,keyword,maxResults});
-    if(category)params.set('type',category);
+    // テキスト検索（Geocoding不要・直接クエリ）
     document.getElementById('loadingText').textContent='企業を検索中...';
-    const res=await fetch('/api/search?'+params.toString());
-    const data=await res.json();
-    if(data.error)throw new Error(data.error);
-    if(data.status==='ZERO_RESULTS'){log('検索結果が0件でした','err');document.getElementById('loadingState').style.display='none';document.getElementById('emptyState').style.display='block';document.getElementById('searchBtn').disabled=false;return;}
-    if(data.status!=='OK')throw new Error('検索エラー: '+data.status);
+    const query=encodeURIComponent(locationStr+' '+keyword);
+    let searchUrl=`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&language=ja&key=${apiKey}`;
+    if(category) searchUrl+=`&type=${category}`;
 
-    const results=(data.results||[]).slice(0,maxResults);
+    const sRes=await fetch(searchUrl);
+    const sData=await sRes.json();
+
+    if(sData.status==='REQUEST_DENIED') throw new Error('APIキーが無効です。Places APIが有効か確認してください。');
+    if(sData.status==='ZERO_RESULTS'){log('検索結果が0件でした。地域・業種を変えてお試しください','err');document.getElementById('loadingState').style.display='none';document.getElementById('emptyState').style.display='block';document.getElementById('searchBtn').disabled=false;return;}
+    if(sData.status!=='OK') throw new Error('検索エラー: '+sData.status);
+
+    const results=(sData.results||[]).slice(0,maxResults);
     companies=[];
+
     for(let i=0;i<results.length;i++){
       document.getElementById('loadingText').textContent=`詳細情報を取得中... (${i+1}/${results.length}件)`;
       try{
-        const dRes=await fetch('/api/search?placeId='+results[i].place_id);
+        const dUrl=`https://maps.googleapis.com/maps/api/place/details/json?place_id=${results[i].place_id}&fields=name,formatted_address,formatted_phone_number,website,rating,user_ratings_total&language=ja&key=${apiKey}`;
+        const dRes=await fetch(dUrl);
         const dData=await dRes.json();
         const d=dData.result||{};
-        companies.push({id:results[i].place_id,name:d.name||results[i].name,address:d.formatted_address||results[i].formatted_address||'住所不明',phone:d.formatted_phone_number||null,website:d.website||null,rating:d.rating||results[i].rating||null,ratingCount:d.user_ratings_total||0});
-      }catch(e){companies.push({id:results[i].place_id,name:results[i].name,address:results[i].formatted_address||'住所不明',phone:null,website:null,rating:results[i].rating||null,ratingCount:results[i].user_ratings_total||0});}
-      await new Promise(r=>setTimeout(r,100));
+        companies.push({
+          id:results[i].place_id,
+          name:d.name||results[i].name,
+          address:d.formatted_address||results[i].formatted_address||'住所不明',
+          phone:d.formatted_phone_number||null,
+          website:d.website||null,
+          rating:d.rating||results[i].rating||null,
+          ratingCount:d.user_ratings_total||results[i].user_ratings_total||0,
+        });
+      }catch(e){
+        companies.push({id:results[i].place_id,name:results[i].name,address:results[i].formatted_address||'住所不明',phone:null,website:null,rating:results[i].rating||null,ratingCount:0});
+      }
+      await new Promise(r=>setTimeout(r,150));
     }
+
     document.getElementById('loadingState').style.display='none';
     renderCompanies();updateStats();
     log(`${companies.length}件の企業情報を取得しました`,'ok');
@@ -312,7 +377,8 @@ function renderCompanies(){
   companies.forEach((c,i)=>{
     const sent=sentIds.has(c.id);
     const stars=c.rating?'★'.repeat(Math.round(c.rating))+'☆'.repeat(5-Math.round(c.rating)):'';
-    const div=document.createElement('div');div.className='company-item';div.style.animationDelay=(i*.05)+'s';
+    const div=document.createElement('div');
+    div.className='company-item';div.style.animationDelay=(i*.05)+'s';
     div.innerHTML=`<div><div class="company-name">${c.name}</div><div class="company-meta"><span>📍 ${c.address}</span>${c.rating?`<span class="stars">${stars}</span><span>${c.rating}(${c.ratingCount}件)</span>`:''}</div><div style="margin-top:5px;">${c.phone?`<span class="tag">📞 ${c.phone}</span>`:''} ${c.website?`<span class="tag"><a href="${c.website}" target="_blank" style="color:var(--accent);text-decoration:none;">🌐 HP</a></span>`:''}</div></div><div style="text-align:right;flex-shrink:0;">${sent?`<div class="sent-badge">✓ 送信済</div>`:`<button class="btn btn-send" onclick="openModal(${i})">送信</button>`}</div>`;
     list.appendChild(div);
   });

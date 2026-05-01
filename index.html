@@ -354,8 +354,9 @@
           <label>地域</label>
           <input type="text" id="location" placeholder="例：渋谷区" value="渋谷区">
 
-          <label>業種カテゴリ</label>
-          <select id="category">
+          <label>業種カテゴリ（選択 または フリーワード）</label>
+          <select id="category" onchange="onCategoryChange()">
+            <option value="">── フリーワードで入力 ──</option>
             <option value="real_estate_agency">不動産</option>
             <option value="general_contractor">建設・建築</option>
             <option value="electrician">電気・設備工事</option>
@@ -371,6 +372,9 @@
             <option value="school">教育・スクール</option>
             <option value="beauty_salon">美容院・サロン</option>
           </select>
+          <div id="freewordArea">
+            <input type="text" id="freeword" placeholder="例：スマートホーム、設備管理、介護施設 など" style="margin-top:-8px;">
+          </div>
 
           <label>取得件数</label>
           <select id="maxResults">
@@ -526,12 +530,27 @@
     location.reload();
   }
 
+  // ===== CATEGORY TOGGLE =====
+  function onCategoryChange() {
+    const cat = document.getElementById('category').value;
+    const fw = document.getElementById('freewordArea');
+    fw.style.display = cat === '' ? 'block' : 'none';
+    if (cat !== '') document.getElementById('freeword').value = '';
+  }
+
   // ===== SEARCH =====
   async function searchCompanies() {
     const location = document.getElementById('location').value.trim();
     const category = document.getElementById('category').value;
-    const categoryLabel = document.getElementById('category').selectedOptions[0].text;
+    const categoryLabel = category
+      ? document.getElementById('category').selectedOptions[0].text
+      : document.getElementById('freeword').value.trim();
     const maxResults = parseInt(document.getElementById('maxResults').value);
+
+    if (!categoryLabel) {
+      log('業種カテゴリを選択するか、フリーワードを入力してください', 'err');
+      return;
+    }
 
     document.getElementById('searchBtn').disabled = true;
     document.getElementById('emptyState').style.display = 'none';
@@ -548,7 +567,8 @@
       const maxFetch = maxResults <= 10 ? 1 : 2;
 
       do {
-        let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(location + ' ' + categoryLabel)}&type=${category}&language=ja&key=${apiKey}`;
+        const typeParam = category ? `&type=${category}` : '';
+        let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(location + ' ' + categoryLabel)}${typeParam}&language=ja&key=${apiKey}`;
         if (pageToken) url += `&pagetoken=${pageToken}`;
         const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
         document.getElementById('loadingText').textContent = `企業情報を取得中... (${allResults.length}件)`;

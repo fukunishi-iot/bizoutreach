@@ -24,7 +24,6 @@
   .setup-btn:disabled{opacity:.4;cursor:not-allowed;}
   .setup-error{background:rgba(255,82,82,.1);border:1px solid rgba(255,82,82,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:#ff8a80;margin-bottom:14px;display:none;}
   .setup-error.show{display:block;}
-  .verifying{text-align:center;padding:10px;font-family:var(--font-mono);font-size:12px;color:var(--muted);display:none;}
   #appScreen{display:none;}
   header{border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;gap:12px;background:rgba(17,24,39,.9);backdrop-filter:blur(10px);position:sticky;top:0;z-index:100;}
   .logo{font-family:var(--font-mono);font-size:16px;color:var(--accent);letter-spacing:2px;}
@@ -108,29 +107,23 @@
 </head>
 <body>
 
-<!-- SETUP -->
 <div id="setupScreen">
   <div class="setup-card">
     <div class="setup-logo">BIZ<span>/</span>OUTREACH</div>
-    <div class="setup-subtitle">初回設定：お名前とGoogle Places APIキーを登録してください。<br>次回以降は自動ログインされます。</div>
+    <div class="setup-subtitle">初回設定：お名前を登録してください。<br>APIキーはサーバー側で管理されています。</div>
     <label class="setup-label">お名前（識別用）</label>
     <input class="setup-input" type="text" id="setupName" placeholder="例：福西 佐允">
-    <label class="setup-label">Google Places API キー</label>
-    <input class="setup-input" type="password" id="setupApiKey" placeholder="AIzaSy...">
-    <div class="setup-hint"><a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a> でPlaces APIを有効にしたキーを入力してください。</div>
     <div class="setup-error" id="setupError"></div>
-    <div class="verifying" id="verifying">🔍 確認中...</div>
-    <button class="setup-btn" id="setupBtn" onclick="doSetup()">登録して始める →</button>
+    <button class="setup-btn" id="setupBtn" onclick="doSetup()">始める →</button>
   </div>
 </div>
 
-<!-- APP -->
 <div id="appScreen">
   <header>
     <div class="logo">BIZ<span>/</span>OUTREACH</div>
     <div class="header-user">
       <span id="headerName"></span>
-      <button class="btn-reset" onclick="resetSetup()">APIキー変更</button>
+      <button class="btn-reset" onclick="resetSetup()">名前変更</button>
     </div>
     <div class="status-dot"></div>
   </header>
@@ -228,7 +221,6 @@
   </div>
 </div>
 
-<!-- Modal -->
 <div class="modal-overlay" id="sendModal">
   <div class="modal">
     <h3>📨 問い合わせ送信確認</h3>
@@ -245,64 +237,33 @@
 </div>
 
 <script>
-const STORAGE_KEY_NAME = 'bizoutreach_name';
-const STORAGE_KEY_API  = 'bizoutreach_apikey';
-let companies=[], sentIds=new Set(), sendHistory=[], currentIdx=-1, apiKey='';
+const STORAGE_KEY_NAME='bizoutreach_name';
+let companies=[],sentIds=new Set(),sendHistory=[],currentIdx=-1;
 
 function init(){
   const name=localStorage.getItem(STORAGE_KEY_NAME);
-  const key=localStorage.getItem(STORAGE_KEY_API);
-  if(name&&key){apiKey=key;showApp(name);}
+  if(name){showApp(name);}
   else{document.getElementById('setupScreen').style.display='flex';}
 }
 
 function doSetup(){
   const name=document.getElementById('setupName').value.trim();
-  const key=document.getElementById('setupApiKey').value.trim();
   if(!name){showSetupError('お名前を入力してください');return;}
-  if(!key){showSetupError('APIキーを入力してください');return;}
-  document.getElementById('setupBtn').disabled=true;
-  document.getElementById('verifying').style.display='block';
-  apiKey=key;
   localStorage.setItem(STORAGE_KEY_NAME,name);
-  localStorage.setItem(STORAGE_KEY_API,key);
   showApp(name);
 }
 
-function showSetupError(msg){
-  const e=document.getElementById('setupError');
-  e.textContent=msg;e.classList.add('show');
-  document.getElementById('setupBtn').disabled=false;
-  document.getElementById('verifying').style.display='none';
-}
+function showSetupError(msg){const e=document.getElementById('setupError');e.textContent=msg;e.classList.add('show');}
+function showApp(name){document.getElementById('setupScreen').style.display='none';document.getElementById('appScreen').style.display='block';document.getElementById('headerName').textContent=name+' さん';}
+function resetSetup(){localStorage.removeItem(STORAGE_KEY_NAME);location.reload();}
+function onCategoryChange(){const cat=document.getElementById('category').value;document.getElementById('freewordArea').style.display=cat===''?'block':'none';if(cat!=='')document.getElementById('freeword').value='';}
 
-function showApp(name){
-  document.getElementById('setupScreen').style.display='none';
-  document.getElementById('appScreen').style.display='block';
-  document.getElementById('headerName').textContent=name+' さん';
-}
-
-function resetSetup(){
-  if(!confirm('APIキーの設定をリセットしますか？'))return;
-  localStorage.removeItem(STORAGE_KEY_NAME);
-  localStorage.removeItem(STORAGE_KEY_API);
-  location.reload();
-}
-
-function onCategoryChange(){
-  const cat=document.getElementById('category').value;
-  document.getElementById('freewordArea').style.display=cat===''?'block':'none';
-  if(cat!=='')document.getElementById('freeword').value='';
-}
-
-// ===== Places API (New) via fetch =====
 async function searchCompanies(){
   const locationStr=document.getElementById('location').value.trim();
   const category=document.getElementById('category').value;
   const freeword=document.getElementById('freeword').value.trim();
   const keyword=category?document.getElementById('category').selectedOptions[0].text:freeword;
   const maxResults=parseInt(document.getElementById('maxResults').value);
-
   if(!keyword){log('業種カテゴリを選択するか、フリーワードを入力してください','err');return;}
 
   document.getElementById('searchBtn').disabled=true;
@@ -312,53 +273,27 @@ async function searchCompanies(){
   log(`「${locationStr}」の「${keyword}」を検索中...`);
 
   try{
-    // Step1: Geocoding
-    document.getElementById('loadingText').textContent='地域を特定中...';
-    const geoUrl=`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(locationStr+' 日本')}&key=${apiKey}`;
-    const geoRes=await fetch(geoUrl);
-    const geoData=await geoRes.json();
-    if(geoData.status!=='OK') throw new Error('地域が見つかりません: '+geoData.status);
-    const loc=geoData.results[0].geometry.location;
-
-    // Step2: Text Search
+    const params=new URLSearchParams({location:locationStr,keyword,maxResults});
+    if(category)params.set('type',category);
     document.getElementById('loadingText').textContent='企業を検索中...';
-    const searchQuery=locationStr+' '+keyword;
-    let searchUrl=`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&location=${loc.lat},${loc.lng}&radius=3000&language=ja&key=${apiKey}`;
-    if(category) searchUrl+=`&type=${category}`;
+    const res=await fetch('/api/search?'+params.toString());
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    if(data.status==='ZERO_RESULTS'){log('検索結果が0件でした','err');document.getElementById('loadingState').style.display='none';document.getElementById('emptyState').style.display='block';document.getElementById('searchBtn').disabled=false;return;}
+    if(data.status!=='OK')throw new Error('検索エラー: '+data.status);
 
-    const sRes=await fetch(searchUrl);
-    const sData=await sRes.json();
-
-    if(sData.status==='REQUEST_DENIED') throw new Error('APIキーエラー: '+sData.error_message);
-    if(sData.status==='ZERO_RESULTS'){log('検索結果が0件でした','err');document.getElementById('loadingState').style.display='none';document.getElementById('emptyState').style.display='block';document.getElementById('searchBtn').disabled=false;return;}
-    if(sData.status!=='OK') throw new Error('検索エラー: '+sData.status);
-
-    const results=(sData.results||[]).slice(0,maxResults);
-
-    // Step3: Details
+    const results=(data.results||[]).slice(0,maxResults);
     companies=[];
     for(let i=0;i<results.length;i++){
       document.getElementById('loadingText').textContent=`詳細情報を取得中... (${i+1}/${results.length}件)`;
       try{
-        const dUrl=`https://maps.googleapis.com/maps/api/place/details/json?place_id=${results[i].place_id}&fields=name,formatted_address,formatted_phone_number,website,rating,user_ratings_total&language=ja&key=${apiKey}`;
-        const dRes=await fetch(dUrl);
+        const dRes=await fetch('/api/search?placeId='+results[i].place_id);
         const dData=await dRes.json();
         const d=dData.result||{};
-        companies.push({
-          id:results[i].place_id,
-          name:d.name||results[i].name,
-          address:d.formatted_address||results[i].formatted_address||results[i].vicinity||'住所不明',
-          phone:d.formatted_phone_number||null,
-          website:d.website||null,
-          rating:d.rating||results[i].rating||null,
-          ratingCount:d.user_ratings_total||results[i].user_ratings_total||0,
-        });
-      }catch(e){
-        companies.push({id:results[i].place_id,name:results[i].name,address:results[i].vicinity||'住所不明',phone:null,website:null,rating:results[i].rating||null,ratingCount:results[i].user_ratings_total||0});
-      }
-      await new Promise(r=>setTimeout(r,150));
+        companies.push({id:results[i].place_id,name:d.name||results[i].name,address:d.formatted_address||results[i].formatted_address||'住所不明',phone:d.formatted_phone_number||null,website:d.website||null,rating:d.rating||results[i].rating||null,ratingCount:d.user_ratings_total||0});
+      }catch(e){companies.push({id:results[i].place_id,name:results[i].name,address:results[i].formatted_address||'住所不明',phone:null,website:null,rating:results[i].rating||null,ratingCount:results[i].user_ratings_total||0});}
+      await new Promise(r=>setTimeout(r,100));
     }
-
     document.getElementById('loadingState').style.display='none';
     renderCompanies();updateStats();
     log(`${companies.length}件の企業情報を取得しました`,'ok');
@@ -371,15 +306,13 @@ async function searchCompanies(){
 }
 
 function renderCompanies(){
-  const list=document.getElementById('companyList');
-  list.innerHTML='';
+  const list=document.getElementById('companyList');list.innerHTML='';
   if(!companies.length){document.getElementById('emptyState').style.display='block';document.getElementById('resultCount').textContent='0件';return;}
   document.getElementById('resultCount').textContent=companies.length+'件';
   companies.forEach((c,i)=>{
     const sent=sentIds.has(c.id);
     const stars=c.rating?'★'.repeat(Math.round(c.rating))+'☆'.repeat(5-Math.round(c.rating)):'';
-    const div=document.createElement('div');
-    div.className='company-item';div.style.animationDelay=(i*.05)+'s';
+    const div=document.createElement('div');div.className='company-item';div.style.animationDelay=(i*.05)+'s';
     div.innerHTML=`<div><div class="company-name">${c.name}</div><div class="company-meta"><span>📍 ${c.address}</span>${c.rating?`<span class="stars">${stars}</span><span>${c.rating}(${c.ratingCount}件)</span>`:''}</div><div style="margin-top:5px;">${c.phone?`<span class="tag">📞 ${c.phone}</span>`:''} ${c.website?`<span class="tag"><a href="${c.website}" target="_blank" style="color:var(--accent);text-decoration:none;">🌐 HP</a></span>`:''}</div></div><div style="text-align:right;flex-shrink:0;">${sent?`<div class="sent-badge">✓ 送信済</div>`:`<button class="btn btn-send" onclick="openModal(${i})">送信</button>`}</div>`;
     list.appendChild(div);
   });

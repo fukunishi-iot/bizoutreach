@@ -492,7 +492,7 @@
     // APIキー検証（簡易テスト）
     try {
       const testUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=test&key=${key}`;
-      const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(testUrl)}`;
+      const proxy = `https://corsproxy.io/?url=${encodeURIComponent(testUrl)}`;
       const res = await fetch(proxy);
       const data = await res.json();
       if (data.status === 'REQUEST_DENIED') {
@@ -570,7 +570,7 @@
         const typeParam = category ? `&type=${category}` : '';
         let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(location + ' ' + categoryLabel)}${typeParam}&language=ja&key=${apiKey}`;
         if (pageToken) url += `&pagetoken=${pageToken}`;
-        const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+        const proxy = `https://corsproxy.io/?url=${encodeURIComponent(url)}`;
         document.getElementById('loadingText').textContent = `企業情報を取得中... (${allResults.length}件)`;
 
         const res = await fetch(proxy);
@@ -601,7 +601,7 @@
         document.getElementById('loadingText').textContent = `詳細情報を取得中... (${i+1}/${companies.length}件)`;
         try {
           const dUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${companies[i].id}&fields=website,formatted_phone_number&language=ja&key=${apiKey}`;
-          const dp = `https://api.allorigins.win/raw?url=${encodeURIComponent(dUrl)}`;
+          const dp = `https://corsproxy.io/?url=${encodeURIComponent(dUrl)}`;
           const dr = await fetch(dp);
           const dd = await dr.json();
           if (dd.result) { companies[i].website = dd.result.website || null; companies[i].phone = dd.result.formatted_phone_number || null; }
